@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GateSentry.Cli/GateSentry.Cli.csproj" />
+    <Project Path="src/GateSentry.Core/GateSentry.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GateSentry.Tests/GateSentry.Tests.csproj" />
+  </Folder>
+</Solution>

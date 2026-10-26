@@ -1,0 +1,11 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+*.sarif
+*.json
+!.gatesentry-baseline.json
+!appsettings.json
