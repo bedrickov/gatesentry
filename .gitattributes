@@ -1,0 +1,24 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# Source code files with CRLF
+*.cs text eol=crlf
+*.csproj text eol=crlf
+*.sln text eol=crlf
+*.slnx text eol=crlf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Markdown and CI files with LF
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+.gitignore text eol=lf
+
+# Binary files
+*.dll binary
+*.exe binary
+*.ico binary
+*.png binary

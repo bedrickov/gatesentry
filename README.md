@@ -1,152 +1,164 @@
 # GateSentry
 
-<p align="center">
-  <strong>Fast, High-Precision DevSecOps Static Analysis & Secret Guardrail CLI</strong>
-</p>
+<div align="center">
 
-<p align="center">
-  <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10" />
-  <img src="https://img.shields.io/badge/AOT-Ready-success" alt="AOT Ready" />
-  <img src="https://img.shields.io/badge/SARIF-OASIS%202.1-blue" alt="SARIF v2.1" />
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT" />
-  <img src="https://img.shields.io/badge/Zero-External%20Deps-brightgreen" alt="Zero Dependencies" />
-</p>
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4?style=flat-square&logo=linux)
+![Runtime](https://img.shields.io/badge/.NET-10.0%20LTS-512BD4?style=flat-square&logo=dotnet)
+![Architecture](https://img.shields.io/badge/Architecture-x64%20%2F%20ARM64-informational?style=flat-square)
+![SARIF Spec](https://img.shields.io/badge/SARIF-OASIS%20v2.1-blue?style=flat-square)
+![Dependencies](https://img.shields.io/badge/Dependencies-Zero%20(Pure%20BCL)-success?style=flat-square)
+![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square)
 
----
+**Высокопроизводительный DevSecOps статический анализатор кода и сканер секретов.**  
+*Многопоточный аудит репозиториев, валидация криптографической энтропии Шеннона, маскирование токенов и нативный экспорт в GitHub Code Scanning (SARIF v2.1).*
 
-## ⚡ Overview
+[О проекте](#о-проекте) • [Возможности](#возможности) • [Архитектура](#архитектура) • [Сборка](#сборка-из-исходников) • [CLI и CI/CD](#использование-cli) • [Правила обнаружения](#каталог-правил)
 
-**GateSentry** is a lightweight, zero-dependency DevSecOps static analysis tool written in modern **C# (.NET 10)**. It enforces security guardrails in your repository prior to code reaching production or public version control.
-
-Unlike naive regex-only scanners that overwhelm developers with hundreds of false positives, **GateSentry** combines:
-1. **Multi-pattern heuristic detection** (cloud secrets, private keys, LLM tokens, insecure TLS, misconfigurations).
-2. **Shannon Entropy validation** to distinguish real high-randomness cryptographic secrets from dummy test strings.
-3. **Safe Redaction engine** ensuring sensitive credentials are never dumped unmasked into CI logs or stdout.
-4. **Deterministic Fingerprinting & Baseline suppression** allowing clean integration into mature brownfield projects without breaking builds.
-5. **Native SARIF v2.1 export** directly compatible with **GitHub Code Scanning**, GitLab SAST, and Azure DevOps Security Center.
+</div>
 
 ---
 
-## ✨ Features
+## О проекте
 
-- **🚀 Ultra-Fast Parallel Scanning**: Utilizes lock-free streaming parallel evaluation across all CPU cores.
-- **🛡️ Built-in Security Rules**:
-  - AWS Access Keys & High-Entropy Secret Keys
-  - GitHub PATs (classic `ghp_` and fine-grained `github_pat_`)
-  - RSA, EC, OpenSSH, PGP unencrypted private keys
-  - OpenAI & Anthropic API keys
-  - Telegram & Slack Bot tokens
-  - Embedded database connection URIs with plaintext credentials
-  - Insecure TLS/SSL bypasses (`rejectUnauthorized: false`, `ServerCertificateCustomValidationCallback => true`)
-  - Hardcoded symmetric JWT keys
-  - Container privilege escalation (root execution)
-- **🔕 Inline Exclusion**: Simply append `// gatesentry:ignore` or `# gatesentry:ignore` to safe lines.
-- **📑 Baseline Suppressions**: Save known legacy issues to `.gatesentry-baseline.json` and block only new leaks.
-- **📊 Standard Output Formats**: SARIF 2.1, JSON, and rich ANSI terminal reporting.
+Большинство сторонних сканеров секретов страдают двумя ключевыми проблемами:
+1. **Каскад ложных срабатываний**: примитивные регулярные выражения спотыкаются о тестовые строки вроде `AKIA0000000000000000` или `password="secret"`.
+2. **Утечка конфиденциальных данных в логи**: при обнаружении уязвимости CLI выводит секрет целиком в открытый лог сборки CI/CD, фактически компрометируя его еще раз.
+
+**GateSentry** спроектирован с упором на надежность, предсказуемость системных вызовов и интеграцию в современные пайплайны разработки:
+- **Нулевые сторонние зависимости**: использует только стандартную библиотеку (.NET 10 BCL), что исключает supply-chain атаки на сам анализатор.
+- **Двойная валидация (Regex + Shannon Entropy)**: кандидаты в токены анализируются по формуле информационной энтропии Шеннона, отсеивая низкоэнтропийные заглушки.
+- **Детерминированное маскирование (Redaction)**: перед выводом в консоль или лог токен надежно маскируется (`AKI**************PLE`).
+- **Снимок базового состояния (Baseline)**: сохранение известных легаси-проблем в `.gatesentry-baseline.json` для поэтапного устранения техдолга без остановки деплоев.
+- **Стандарт OASIS SARIF v2.1**: результаты сканирования напрямую загружаются в **GitHub Security -> Code scanning alerts**.
 
 ---
 
-## 📦 Quick Start
+## Возможности
 
-### Installation & Building
+- **Параллельное сканирование на уровне ядер**: распределение файлов через `Parallel.ForEachAsync` с автоматическим контролем аллокаций.
+- **Обнаружение утечек облачной инфраструктуры**: AWS Access Keys, AWS Secret Access Keys, GCP/Azure Service Credentials.
+- **Контроль аутентификации разработчиков**: GitHub PATs (классические `ghp_` и fine-grained `github_pat_`), GitLab Personal Tokens.
+- **Поиск незашифрованных криптографических ключей**: RSA, EC, OPENSSH, DSA, PGP Private Key Headers.
+- **Защита современных LLM и чат-ботов**: OpenAI API (`sk-...`), Anthropic API (`sk-ant-...`), Telegram Bot Tokens, Slack Webhook/App Tokens.
+- **Аудит конфигураций безопасности**:
+  - Строки подключения к БД (PostgreSQL, MySQL, MongoDB, Redis, MSSQL) с открытыми паролями.
+  - Опасные отключения валидации TLS/SSL (`ServerCertificateCustomValidationCallback => true`, `rejectUnauthorized: false`, `verify=False`).
+  - Статические симметричные ключи подписи JWT токенов.
+  - Запуск контейнеров от имени `root`.
+- **Inline подавление**: возможность точечного игнорирования безопасных строк через комментарии `// gatesentry:ignore` или `# gatesentry:ignore`.
 
-```bash
-# Clone the repository
-git clone https://github.com/<your-username>/GateSentry.git
-cd GateSentry
+---
 
-# Build solution
-dotnet build -c Release
+## Архитектура
 
-# Run tests
-dotnet test
+Проект организован по стандартам корпоративной разработки:
+
+```
+GateSentry/
+├── .github/workflows/
+│   └── build.yml                   # CI/CD: Сборка, xUnit тесты, самосканирование и выгрузка SARIF
+├── src/
+│   ├── GateSentry.Core/            # Чистая библиотека ядра (NetStandard/Net10)
+│   │   ├── Analysis/               # Расчет энтропии Шеннона, хеширование SHA-256 и маскирование
+│   │   ├── Config/                 # Модели опций и сериализация Baseline
+│   │   ├── Engine/                 # Многопоточный диспетчер сканирования файлов
+│   │   ├── Formatters/             # Форматирование OASIS SARIF v2.1 и JSON
+│   │   ├── Models/                 # Записи (Records) и типы уровней серьезности
+│   │   └── Rules/                  # Встроенный каталог правил безопасности
+│   └── GateSentry.Cli/             # Консольный интерфейс с ANSI-рендерингом
+├── tests/
+│   └── GateSentry.Tests/           # Сьют юнит-тестов (xUnit)
+├── build.bat / build.ps1           # Кроссплатформенные скрипты автоматизации сборки
+├── LICENSE                         # Лицензия Apache-2.0
+└── GateSentry.slnx                 # Solution
 ```
 
-### CLI Usage
+---
+
+## Сборка из исходников
+
+### Требования
+- [.NET 10 SDK](https://dotnet.microsoft.com/)
+- Windows, Linux или macOS
+
+### Быстрый билд через скрипт
+```powershell
+# Сборка проекта и прогон юнит-тестов
+.\build.ps1 -Test
+
+# Очистка артефактов сборки
+.\build.ps1 -Clean
+```
+
+Или через стандартный `dotnet CLI`:
+```bash
+dotnet restore GateSentry.slnx
+dotnet build GateSentry.slnx -c Release
+dotnet test GateSentry.slnx -c Release
+```
+
+---
+
+## Использование CLI
 
 ```bash
-# Scan current repository
+# Базовое сканирование текущей папки
 dotnet run --project src/GateSentry.Cli -- scan .
 
-# Scan and export standard SARIF report for GitHub Code Scanning
-dotnet run --project src/GateSentry.Cli -- scan . --sarif gatesentry-results.sarif
+# Сканирование с генерацией SARIF отчета для CI
+dotnet run --project src/GateSentry.Cli -- scan . --sarif scan-results.sarif
 
-# Scan with custom failure threshold (Critical, High, Medium, Low)
+# Порог ошибки: прерывать билд только при Critical уязвимостях
 dotnet run --project src/GateSentry.Cli -- scan . --fail-on Critical
 
-# Generate a baseline file to suppress current legacy findings
+# Создание baseline-файла для подавления существующих находок
 dotnet run --project src/GateSentry.Cli -- baseline .
 
-# Inspect entropy score of any suspect token
+# Анализ энтропии произвольной строки
 dotnet run --project src/GateSentry.Cli -- entropy "4a8B+9cK1lMnOpQrStUvWxYz0123456789+AbCdE="
 
-# List all active rules and severity levels
+# Вывод каталога активных правил
 dotnet run --project src/GateSentry.Cli -- rules
 ```
 
 ---
 
-## 🔄 GitHub Actions CI/CD Integration
+## Каталог правил
 
-Embed GateSentry in `.github/workflows/security.yml`:
+| ID | Важность | Категория | Описание |
+| :--- | :--- | :--- | :--- |
+| **GS-001** | `Critical` | CloudCredential | Идентификаторы AWS Access Key (`AKIA...`) |
+| **GS-002** | `Critical` | CloudCredential | Секретные ключи AWS Secret Access Key с проверкой энтропии |
+| **GS-003** | `Critical` | Secret | Персональные токены доступа GitHub (PAT) |
+| **GS-004** | `Critical` | PrivateKey | Заголовки закрытых криптографических ключей RSA / EC / SSH |
+| **GS-005** | `High` | Secret | Высокоэнтропийные API токены и ключи сервисов |
+| **GS-006** | `High` | Secret | Боты и токены интеграций Slack (`xoxb-...`) |
+| **GS-007** | `High` | Secret | Аутентификационные токены Telegram Bot API |
+| **GS-008** | `High` | Misconfiguration | Строки подключения к БД с открытыми учетными данными |
+| **GS-009** | `Critical` | Secret | Платные API ключи нейросетей OpenAI и Anthropic |
+| **GS-010** | `Medium` | Misconfiguration | Отключение проверки SSL/TLS сертификатов |
+| **GS-011** | `High` | WeakCryptography | Захардкоженные симметричные ключи подписи JWT |
+| **GS-012** | `Low` | Misconfiguration | Запуск Docker-контейнера от пользователя root |
+
+---
+
+## Интеграция с GitHub Actions
+
+Добавьте шаг в `.github/workflows/security.yml`:
 
 ```yaml
-name: "GateSentry Security Audit"
+- name: Run GateSentry Security Audit
+  run: dotnet run --project src/GateSentry.Cli -- scan . --sarif results.sarif --fail-on High
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-jobs:
-  security-audit:
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      contents: read
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
-      - name: Run GateSentry Scan
-        run: |
-          dotnet run --project src/GateSentry.Cli -- scan . --sarif results.sarif --fail-on High
-
-      - name: Upload SARIF to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: results.sarif
+- name: Upload to GitHub Code Scanning
+  uses: github/codeql-action/upload-sarif@v3
+  if: always()
+  with:
+    sarif_file: results.sarif
 ```
 
 ---
 
-## 🏗️ Architecture
+## Лицензия
 
-```
-GateSentry/
-├── src/
-│   ├── GateSentry.Core/            # Core scanning engine (Zero third-party dependencies)
-│   │   ├── Analysis/               # Shannon entropy & token masking algorithms
-│   │   ├── Config/                 # Scanner options & baseline management
-│   │   ├── Engine/                 # Multi-core concurrent repository scanner
-│   │   ├── Formatter/              # OASIS SARIF v2.1 & JSON report builders
-│   │   ├── Models/                 # Immutable records for rules, findings & metrics
-│   │   └── Rules/                  # Built-in security detection catalog
-│   └── GateSentry.Cli/             # High-performance CLI interface & ANSI terminal UI
-└── tests/
-    └── GateSentry.Tests/           # Unit & integration test suite (xUnit)
-```
-
----
-
-## 📄 License
-
-MIT © 2026. Designed for modern high-reliability engineering pipelines.
+Проект распространяется под лицензией **Apache License 2.0**. Подробности в файле [LICENSE](LICENSE).

@@ -1,0 +1,38 @@
+name: CI/CD GateSentry
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build & Verify (.NET 10)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore GateSentry.slnx
+
+      - name: Build via PowerShell Script
+        run: powershell -ExecutionPolicy Bypass -File .\build.ps1 -Test
+
+      - name: Run Self Security Audit
+        run: |
+          dotnet run --project src/GateSentry.Cli -- scan . --sarif gatesentry-results.sarif --fail-on High
+
+      - name: Upload SARIF Security Scan
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: gatesentry-results.sarif
