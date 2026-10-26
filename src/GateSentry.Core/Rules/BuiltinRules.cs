@@ -36,7 +36,7 @@ public static class BuiltinRules
             Category: RuleCategory.CloudCredential,
             Severity: SeverityLevel.Critical,
             Description: "Detected high-entropy AWS Secret Access Key assignment.",
-            Pattern: @"(?i)(aws_secret_access_key|aws_sec_key|aws_secret)\s*[:=]\s*['""]?([A-Za-z0-9\/+=]{40})['""]?",
+            Pattern: @"(?i)(?:aws_secret_access_key|aws_sec_key|aws_secret)\s*[:=]\s*['""]?([A-Za-z0-9\/+=]{40})['""]?",
             EntropyThreshold: "4.0",
             RemediationGuide: "Inactivate key in AWS IAM and audit CloudTrail for unauthorized API calls."
         ),
@@ -110,7 +110,7 @@ public static class BuiltinRules
             Category: RuleCategory.Misconfiguration,
             Severity: SeverityLevel.Medium,
             Description: "Detected disabled TLS/SSL certificate verification (ServerCertificateCustomValidationCallback / rejectUnauthorized: false / verify=False).",
-            Pattern: @"(?i)(ServerCertificateCustomValidationCallback\s*=\s*(?:\([^\)]*\)|[a-zA-Z0-9_]+)\s*=>\s*true|rejectUnauthorized\s*:\s*false|verify\s*=\s*False|CURLOPT_SSL_VERIFYPEER\s*,\s*0)",
+            Pattern: @"(?i)(?:ServerCertificateCustomValidationCallback\s*=\s*(?:\([^\)]*\)|[a-zA-Z0-9_]+)\s*=>\s*true|rejectUnauthorized\s*:\s*false|verify\s*=\s*False|CURLOPT_SSL_VERIFYPEER\s*,\s*0)",
             RemediationGuide: "Ensure strict certificate validation is enabled in production environments to prevent MITM attacks."
         ),
         new(

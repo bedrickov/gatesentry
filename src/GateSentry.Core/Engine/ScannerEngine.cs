@@ -173,7 +173,9 @@ public sealed class ScannerEngine
                 int colStart = match.Index + 1;
                 int colEnd = match.Index + match.Length + 1;
                 string redacted = RedactionService.Mask(secretCandidate);
-                string redactedLine = line.Replace(secretCandidate, redacted);
+
+                // Use index-based replacement to avoid corrupting repeated identical substrings
+                string redactedLine = ReplaceSubstring(line, match.Index, match.Length, redacted);
 
                 string fingerprint = RedactionService.ComputeFingerprint(rule.Definition.Id, relativePath, lineIndex + 1, match.Value);
 
@@ -198,6 +200,15 @@ public sealed class ScannerEngine
         }
 
         return result;
+    }
+
+    private static string ReplaceSubstring(string source, int startIndex, int length, string replacement)
+    {
+        if (startIndex < 0 || startIndex >= source.Length || length <= 0)
+            return source;
+
+        int safeLength = Math.Min(length, source.Length - startIndex);
+        return string.Concat(source.AsSpan(0, startIndex), replacement, source.AsSpan(startIndex + safeLength));
     }
 
     private List<string> DiscoverFiles(string rootPath)

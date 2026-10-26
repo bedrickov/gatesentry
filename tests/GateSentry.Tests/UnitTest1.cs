@@ -81,4 +81,35 @@ public class ScannerTests
             }
         }
     }
+
+    [Fact]
+    public async Task ScannerEngine_CorrectlyReplacesMultipleOccurrencesWithoutCorruptingLine()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "gatesentry_test_multi_" + Guid.NewGuid());
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            string testFile = Path.Combine(tempDir, "keys.env");
+            await File.WriteAllLinesAsync(testFile,
+            [
+                "FIRST_KEY=" + "AKIA" + "IOSFODNN7EXAMPLE"
+            ]);
+
+            var engine = new ScannerEngine();
+            var report = await engine.ScanDirectoryAsync(tempDir);
+
+            Assert.Single(report.Findings);
+            var snippet = report.Findings[0].Location;
+            Assert.Contains("FIRST_KEY=", snippet.RedactedContent);
+            Assert.Contains("AKI**************PLE", snippet.RedactedContent);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
 }
