@@ -163,4 +163,4 @@ dotnet run --project src/GateSentry.Cli -- rules
 
 Проект распространяется под лицензией **Apache License 2.0**. Подробности в файле [LICENSE](LICENSE).
 
-<!-- verified: 2026-10-30 -->
+<!-- verified: 2026-10-31 -->
